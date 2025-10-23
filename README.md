@@ -65,7 +65,7 @@ dst_pts = np.float32([kp_b[m.trainIdx].pt for m in good_matches]).reshape(-1, 1,
 ### 使用RANSAC算法计算单应性矩阵并进行图像拼接
 ```python
 # 使用RANSAC算法计算单应性矩阵并进行图像拼接
-H, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+H, _ = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, 5.0)
 h_a, w_a = img_a.shape[:2]
 h_b, w_b = img_b.shape[:2]
 # 计算拼接后图像的尺寸
@@ -100,7 +100,7 @@ plt.subplot(1,4,4)
 # 显示拼接后的图像
 plt.imshow(cv2.cvtColor(fus_img, cv2.COLOR_BGR2RGB))
 ```
-> ![alt text](image.png)
+> ![alt text](images/output.png)
 ## 实验结果分析
 - SIFT算法能够有效检测图像中的关键点，并生成具有旋转不变性和尺度不变性的特征描述符
 - FLANN匹配器相比暴力匹配器具有更快的匹配速度，适合处理大量特征点
