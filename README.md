@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 ### 读取图像并转换为灰度图
 ```python
 # 读取图像并转换为灰度图以便于后续处理
-img_a = cv2.imread('images/a1.jpg')
-img_b = cv2.imread('images/a2.jpg')
+img_a = cv2.imread('images/b1.jpg')
+img_b = cv2.imread('images/b2.jpg')
 gray_a = cv2.cvtColor(img_a, cv2.COLOR_BGR2GRAY)
 gray_b = cv2.cvtColor(img_b, cv2.COLOR_BGR2GRAY)
 ```
@@ -33,7 +33,7 @@ kp_b, des_b = sift.detectAndCompute(gray_b, None)
 # 使用FLANN匹配器进行特征点匹配
 FLANN_INDEX_KDTREE = 1
 index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-search_params = dict(checks=100)
+search_params = dict(checks=50)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 matches = flann.knnMatch(des_a, des_b, k=2)
 ```
@@ -63,6 +63,9 @@ dst_pts = np.float32([kp_b[m.trainIdx].pt for m in good_matches]).reshape(-1, 1,
 ```
 
 ### 使用RANSAC算法计算单应性矩阵并进行图像拼接
+以图片a为参考，计算单应性矩阵表示图片b到图片a的变换，即把图片b映射到图片a的坐标系，计算包含两图的最小画布，平移到正坐标系，将投影后的图片b放到画布上，再把图片a放回对应位置。
+
+但是由于代码使用的是简单的覆盖而没有做任何对重叠区域的处理，所以在对本就是同一张图片裁切出的两张有重叠部分的图片的拼接效果较好但当出现拍摄角度不同可能出现在重叠边缘变化过于剧烈的情况，可以对重叠部分进行处理再叠加得到更加好的效果。
 ```python
 # 使用RANSAC算法计算单应性矩阵并进行图像拼接
 H, _ = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, 5.0)
@@ -87,19 +90,24 @@ fus_img[-y_min:h_a - y_min, -x_min:w_a - x_min] = img_a
 ### 可视化结果
 ```python
 # 绘制结果
-plt.figure(figsize=(40,40))
-plt.subplot(1,4,1)
+plt.figure(figsize=(40,30))
+plt.subplot(2,2,1)
 # 绘制图像时转换颜色空间以正确显示
 plt.imshow(cv2.cvtColor(img_a, cv2.COLOR_BGR2RGB))
-plt.subplot(1,4,2)
+plt.title('Original Image A', fontsize=32)
+plt.subplot(2,2,2)
 plt.imshow(cv2.cvtColor(img_b, cv2.COLOR_BGR2RGB))
-plt.subplot(1,4,3)
+plt.title('Original Image B', fontsize=32)
+plt.subplot(2,2,3)
 # 显示匹配关键点的图像
 plt.imshow(cv2.cvtColor(matched_keypoints_img, cv2.COLOR_BGR2RGB))
-plt.subplot(1,4,4)
+plt.title('Matched Keypoints', fontsize=32)
+plt.subplot(2,2,4)
 # 显示拼接后的图像
 plt.imshow(cv2.cvtColor(fus_img, cv2.COLOR_BGR2RGB))
+plt.title('Fused Image', fontsize=32)
 ```
+图像包含原图 A、原图 B、关键点匹配可视化、拼接结果，能直观展示从特征检测到拼接的流程与结果。从关键点匹配可视化的图像中可以看到，在非重叠部分外也有关键点进行了匹配，通过算法可以很好的剔除掉这些非真实的关键点，得到的混合拼接结果符合预期。
 > ![alt text](images/output.png)
 ## 实验结果分析
 - SIFT算法能够有效检测图像中的关键点，并生成具有旋转不变性和尺度不变性的特征描述符
